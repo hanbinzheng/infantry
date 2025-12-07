@@ -1,0 +1,15 @@
+build/
+*.bin
+*.elf
+*.hex
+*.map
+*.lst
+
+.gdb_history
+.DS_Store
+
+.vscode/
+.settings/
+.project
+.cproject	
+
