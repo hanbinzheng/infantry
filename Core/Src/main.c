@@ -20,6 +20,8 @@
 #include "main.h"
 #include "dma.h"
 #include "fdcan.h"
+#include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -27,6 +29,10 @@
 /* USER CODE BEGIN Includes */
 #include "bsp_usart.h"
 #include "bsp_fdcan.h"
+#include "bsp_spi.h"
+#include "bsp_tim.h"
+#include "bsp_gpio.h"
+#include "imu.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -94,9 +100,15 @@ int main(void)
   MX_UART5_Init();
   MX_FDCAN1_Init();
   MX_FDCAN3_Init();
+  MX_SPI2_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   BSP_USART_Init();
   BSP_FDCAN_Init();
+  BSP_SPI_Init();
+  BSP_TIM_Init();
+  BSP_GPIO_Init();
+  imu_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */

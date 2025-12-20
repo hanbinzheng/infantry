@@ -3,4 +3,4 @@
 
 void BSP_USART_Init(void);
 
-#endif // __BSP_USART_H_
+#endif // __BSP_USART_H__
