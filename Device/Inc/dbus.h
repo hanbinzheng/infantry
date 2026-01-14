@@ -65,10 +65,12 @@ typedef struct {
     } keyboard;
 } DbusData;
 
+void dbus_data_interpret(uint8_t *buff, DbusData *dbus_data);
+
+
+// global variables
 extern DbusData dbus_data;
 extern uint8_t DbusRxBuf[2][DBUS_FRAME_LENGTH];
 extern uint32_t dbus_tick;
-
-void dbus_data_interpret(uint8_t *buff, DbusData *dbus_data);
 
 #endif //__DBUS_H__
