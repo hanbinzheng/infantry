@@ -4,10 +4,29 @@
 #include "motor.h"
 #include "pid.h"
 
+/*
+/2   1\
+   ^    main control
+\3   4/
+battery
+*/
+
+// control frequency: 125 hz (the same as chassis m3508 can feedback)
+// control identifier: 0x200
+// components (can1, M3508 x 4):
+// 1. chassis front right (data[0], data[1]): can id 1, feedback identifier 0x201
+// 2. chassis front left (data[2], data[3]): can id 1, feedback identifier 0x202
+// 3. chassis back left (data[4], data[5]): can id 1, feedback identifier 0x203
+// 4. chassis back right (data[6], data[7]): can id 1, feedback identifier 0x204
+
 #define M3508_REDUCTION_RATIO (19.0f)
 
-// chassis front right m3508 velocity to current pid (motors[0])
-PidInfo pid_fr_v2c = {
+/*
+ **************************************************************************
+ * parameters
+ **************************************************************************
+ */
+PidInfo pid_fr_v2c = { // chassis front right m3508 velocity to current pid (motors[0])
     .kp = 0.045f,
     .ki = 0.00114514f,
     .kd = 0.0f,
@@ -15,8 +34,7 @@ PidInfo pid_fr_v2c = {
     .out_limit = 20.0f, // current limit 20.0A
 };
 
-// chassis front left m3508 velocity to current pid (motors[1])
-PidInfo pid_fl_v2c = {
+PidInfo pid_fl_v2c = { // chassis front left m3508 velocity to current pid (motors[1])
     .kp = 0.045f,
     .ki = 0.00114514f,
     .kd = 0.0f,
@@ -24,8 +42,7 @@ PidInfo pid_fl_v2c = {
     .out_limit = 20.0f, // current limit 20.0A
 };
 
-// chassis back left m3508 velocity to current pid (motors[2])
-PidInfo pid_bl_v2c = {
+PidInfo pid_bl_v2c = { // chassis back left m3508 velocity to current pid (motors[2])
     .kp = 0.045f,
     .ki = 0.00066666f,
     .kd = 0.0f,
@@ -33,8 +50,7 @@ PidInfo pid_bl_v2c = {
     .out_limit = 20.0f, // current limit 20.0A
 };
 
-// chassis back right m3508 velocity to current pid (motors[3])
-PidInfo pid_br_v2c = {
+PidInfo pid_br_v2c = { // chassis back right m3508 velocity to current pid (motors[3])
     .kp = 0.045f,
     .ki = 0.00066666f,
     .kd = 0.0f,
@@ -42,6 +58,12 @@ PidInfo pid_br_v2c = {
     .out_limit = 20.0f, // current limit 20.0A
 };
 
+
+/*
+ **************************************************************************
+ * useful functions
+ **************************************************************************
+ */
 static inline void set_chassis_command(
     int16_t c_fr, int16_t c_fl, int16_t c_bl, int16_t c_br)
 {
@@ -72,7 +94,7 @@ static inline void set_chassis_command(
     BSP_FDCAN_TxMessage(&hfdcan1, 0x200, data);
 }
 
-void set__body_target(float v_fr, float v_fl, float v_bl, float v_br)
+void set_body_target(float v_fr, float v_fl, float v_bl, float v_br)
 {
     // get m3508 raw data
     v_fr = v_fr * M3508_REDUCTION_RATIO;
@@ -88,4 +110,13 @@ void set__body_target(float v_fr, float v_fl, float v_bl, float v_br)
 
     // set current command
     set_chassis_command(c_fr, c_fl, c_bl, c_br);
+}
+
+/*
+ **************************************************************************
+ * application body task
+ **************************************************************************
+ */
+void body_task(void){
+    ;
 }

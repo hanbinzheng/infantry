@@ -2,8 +2,20 @@
 #include "pid.h"
 #include "motor.h"
 
-// gimbal pitch gm6020 velocity to voltage pid (motors[5])
-PidInfo pid_pitch_v2v = {
+// control frequency: 1000Hz
+// can3, control identifier 0x1FF
+// 1. pitch (data[0], data[1]): GM6020, can id 1, feedback identifier 0x208
+// 2. friction left (data[2], data[3]): M3508, can id 6, feedback identifier 0x206
+// 3. friction right (data[2], data[3]): M3508, can id 7, feedback identifier 0x207
+// 4. trigger (data[2], data[3]): M2006, can id 8, feedback identifier 0x208
+
+
+/*
+ **************************************************************************
+ * parameters
+ **************************************************************************
+ */
+PidInfo pid_pitch_v2v = { // gimbal pitch gm6020 velocity to voltage pid (motors[5])
     .kp = 1.3f,
     .ki = 0.001f,
     .kd = 0.0f,
@@ -11,43 +23,43 @@ PidInfo pid_pitch_v2v = {
     .out_limit = 10.0f,
 };
 
-// gimbal pitch gm6020 position to velocity pid (motors[5]
-PidInfo pid_pitch_p2v = {
+PidInfo pid_pitch_p2v = { // gimbal pitch gm6020 position to velocity pid (motors[5]
     .kp = 13.5f,
     .ki = 0.0f,
     .kd = 0.0f,
     .i_limit = 0.0f,
-    .out_limit = 10.0f, // velocity limit
+    .out_limit = 10.0f, // velocity limit 10 rad/s
 };
 
-// friction left m3508 velocity to current pid (motors[6])
-PidInfo pid_friction_l_v2c = {
+PidInfo pid_friction_l_v2c = { // friction left m3508 velocity to current pid (motors[6])
     .kp = 0.14f,
     .ki = 0.0005f,
     .kd = 0.0f,
     .i_limit = 2.0f,
-    .out_limit = 20.0f,
+    .out_limit = 20.0f, // current limit 20A
 };
 
-// friction right m3508 velocity to current pid (motors[6])
-PidInfo pid_friction_r_v2c = {
+PidInfo pid_friction_r_v2c = { // friction right m3508 velocity to current pid (motors[6])
     .kp = 0.14f,
     .ki = 0.0005f,
     .kd = 0.0f,
     .i_limit = 2.0f,
-    .out_limit = 20.0f,
-
+    .out_limit = 20.0f, // current limit 20A
 };
 
-// trigger m2006 velocity to current pit (motors[8])
-PidInfo pid_trigger_v2c = {
+PidInfo pid_trigger_v2c = { // trigger m2006 velocity to current pit (motors[8])
     .kp = 0.02f,
     .ki = 0.001f,
     .kd = 0.0f,
     .i_limit = 0.5f,
-    .out_limit = 10.0f,
+    .out_limit = 10.0f, // current limit 10A
 };
 
+/*
+ **************************************************************************
+ * useful functions
+ **************************************************************************
+ */
 // pitch gm6020 velocity to voltage control
 float gimbal_pitch_v2v_control(float target_velocity, float measure_velocity)
 {
@@ -115,3 +127,12 @@ void armor_booster_set_velocity(float v_friction_l,
     current_command[TRIGGER - 6] = pid_calculate(&pid_trigger_v2c, v_trigger, measure_trigger);
 }
 */
+
+/*
+ **************************************************************************
+ * application head task
+ **************************************************************************
+ */
+ void head_task(void){
+    ;
+}
