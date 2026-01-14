@@ -8,8 +8,6 @@
 #define PI (3.14159265358979f)
 #endif
 
-#define G (9.81f)
-
 #define GYRO_SENSITIVITY_1000 32.768f
 #define ACCEL_SENSITIVITY_3 10922.66667f
 
@@ -243,14 +241,14 @@ void imu_get_data(ImuRawData *data)
     tmp = (int16_t)((gyro_buff[5] << 8) | gyro_buff[4]);
     data->gyro[2] = ((float)tmp / GYRO_SENSITIVITY_1000) * _PI_OVER_180 - gyro_bias[2];
 
-    // read accel data, note the minus sign
+    // read accel data, the unit is g
     bmi088_accel_read_multi_reg(BMI088_ACCEL_XOUT_L, accel_buff);
     tmp = (int16_t)((accel_buff[1] << 8) | accel_buff[0]);
-    data->accel[0] = -((float)tmp / ACCEL_SENSITIVITY_3) * G;
+    data->accel[0] = ((float)tmp / ACCEL_SENSITIVITY_3);
     tmp = (int16_t)((accel_buff[3] << 8) | accel_buff[2]);
-    data->accel[1] = -((float)tmp / ACCEL_SENSITIVITY_3) * G;
+    data->accel[1] = ((float)tmp / ACCEL_SENSITIVITY_3);
     tmp = (int16_t)((accel_buff[5] << 8) | accel_buff[4]);
-    data->accel[2] = -((float)tmp / ACCEL_SENSITIVITY_3) * G;
+    data->accel[2] = ((float)tmp / ACCEL_SENSITIVITY_3);
 
     // read temperature data
     bmi088_get_temperature(temp_buff);
@@ -269,15 +267,18 @@ void imu_get_data(ImuRawData *data)
  */
 void imu_update(void)
 {
-    float32_t euler[3]; // temporary array
+    // temporary array
+    float32_t euler[3]; // euler angle
+    float32_t w[3];     // angular velocity under world frame
 
     // update raw data
     imu_get_data(&imu_raw_data);
 
     // update imu velocity data
-    imu_data.velocity_roll = imu_raw_data.gyro[0];
-    imu_data.velocity_pitch = imu_raw_data.gyro[1];
-    imu_data.velocity_yaw = imu_raw_data.gyro[2];
+    quat_rotate_vector(&(imu_data.q), imu_raw_data.gyro, w);
+    imu_data.velocity_roll = w[0];
+    imu_data.velocity_pitch = w[1];
+    imu_data.velocity_yaw = w[2];
 
     // update quaternion using mahony filter
     mahony_update(&mahony_filter, imu_raw_data.gyro, imu_raw_data.accel);

@@ -13,9 +13,9 @@ static inline float32_t quat_vector_norm_squared(float32_t *vec, uint32_t len)
 
 static inline float32_t quat_vector_norm(float32_t *vec, uint32_t len)
 {
-    float32_t norm_sq, norm;
-    arm_dot_prod_f32(vec, vec, len, &norm_sq);
-    arm_sqrt_f32(norm_sq, &norm);
+    float32_t norm_square, norm;
+    arm_dot_prod_f32(vec, vec, len, &norm_square);
+    arm_sqrt_f32(norm_square, &norm);
     return norm;
 }
 
@@ -69,10 +69,21 @@ void quat_multiply(Quaternion *a, Quaternion *b, Quaternion *result)
       (q0 p2 + q2 p0 − q1 p3 + q3 p1)j +
       (q0 p3 + q3 p0 + q1 p2 − q2 p1)k
      */
-    result->q_w = a->q_w * b->q_w - a->q_x * b->q_x - a->q_y * b->q_y - a->q_z * b->q_z;
-    result->q_x = a->q_w * b->q_x + a->q_x * b->q_w + a->q_y * b->q_z - a->q_z * b->q_y;
-    result->q_y = a->q_w * b->q_y - a->q_x * b->q_z + a->q_y * b->q_w + a->q_z * b->q_x;
-    result->q_z = a->q_w * b->q_z + a->q_x * b->q_y - a->q_y * b->q_x + a->q_z * b->q_w;
+    float32_t q0, q1, q2, q3;
+    float32_t p0, p1, p2, p3;
+    q0 = a->q_w;
+    q1 = a->q_x;
+    q2 = a->q_y;
+    q3 = a->q_z;
+    p0 = b->q_w;
+    p1 = b->q_x;
+    p2 = b->q_y;
+    p3 = b->q_z;
+
+    result->q_w = q0 * p0 - q1 * p1 - q2 * p2 - q3 * p3;
+    result->q_x = q0 * p1 + q1 * p0 + q2 * p3 - q3 * p2;
+    result->q_y = q0 * p2 + q2 * p0 - q1 * p3 + q3 * p1;
+    result->q_z = q0 * p3 + q3 * p0 + q1 * p2 - q2 * p1;
 }
 
 void quat_scale(Quaternion *q, float32_t scalar, Quaternion *result)
@@ -190,16 +201,16 @@ void quat_to_axis_angle(Quaternion *q, float32_t axis[3], float32_t *angle)
     if (norm > QUAT_EPSILON)
     {
         // get angle
-        float32_t w_over_norm = q->q_w / norm;
-        if (w_over_norm > 1.0f)
+        float32_t q_w_over_norm = q->q_w / norm;
+        if (q_w_over_norm > 1.0f)
         {
-            w_over_norm = 1.0f;
+            q_w_over_norm = 1.0f;
         }
-        else if (w_over_norm < -1.0f)
+        else if (q_w_over_norm < -1.0f)
         {
-            w_over_norm = -1.0f;
+            q_w_over_norm = -1.0f;
         }
-        *angle = 2 * acosf(w_over_norm);
+        *angle = 2 * acosf(q_w_over_norm);
 
         // get rotation axis
         float32_t sin_half_square = 1.0f - (q->q_w * q->q_w) / (norm * norm);
@@ -278,6 +289,8 @@ void quat_rotate_vector(Quaternion *q, float32_t vec[3], float32_t result[3])
 // euler[0]: yaw, euler[1]: pitch, euler[2]: roll
 void quat_from_euler(float32_t euler[3], Quaternion *q)
 {
+    ;
+    /* to be checked
     float32_t roll = euler[2] * 0.5f;
     float32_t pitch = euler[1] * 0.5f;
     float32_t yaw = euler[0] * 0.5f;
@@ -292,6 +305,7 @@ void quat_from_euler(float32_t euler[3], Quaternion *q)
     q->q_x = sr * cp * cy - cr * sp * sy;
     q->q_y = cr * sp * cy + sr * cp * sy;
     q->q_z = cr * cp * sy - sr * sp * cy;
+    */
 }
 
 // from quaternion to euler angles
@@ -314,17 +328,15 @@ void quat_to_euler(Quaternion *q, float32_t euler[3])
 
     // pitch (y-axis rotation)
     float32_t sinp = 2.0f * (q_w * q_y - q_z * q_x);
-    float32_t sinp_abs;
-    arm_abs_f32(&sinp, &sinp_abs, 1);
-
-    if (sinp_abs >= 1.0f)
+    if (sinp > 1.0f)
     {
-        euler[1] = copysignf(QUAT_PI / 2.0f, sinp);
+        sinp = 1.0f;
     }
-    else
+    if (sinp < -1.0f)
     {
-        euler[1] = asinf(sinp);
+        sinp = -1.0f;
     }
+    euler[1] = asinf(sinp);
 
     // yaw (z-axis rotation)
     float32_t siny_cosp = 2.0f * (q_w * q_z + q_x * q_y);

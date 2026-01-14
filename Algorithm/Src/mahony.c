@@ -53,13 +53,13 @@ void mahony_compute_error(MahonyFilter *filter, float32_t measured[3], float32_t
 
     // estimate orientation of g based on current quaternion
     float32_t estimated_g[3];
-    static float32_t world_g[3] = {0.0f, 0.0f, -1.0f}; // word coordinate gravity orientation
+    static float32_t world_g[3] = {0.0f, 0.0f, 1.0f}; // word coordinate gravity orientation
     Quaternion q_conj;
     quat_conjugate(&(filter->q), &q_conj);
-    quat_rotate_vector(&q_conj, world_g, estimated_g);  // transform word frame into imu frame
+    quat_rotate_vector(&q_conj, world_g, estimated_g); // transform word frame into imu frame
 
-    // acceleration error: cross product (estimated x measured)
-    cross_product(estimated_g, _measured, error);
+    // acceleration error: cross product (measured x estimated)
+    cross_product(_measured, estimated_g, error);
 }
 
 void mahony_init(MahonyFilter *filter,
@@ -91,7 +91,7 @@ void mahony_update(MahonyFilter *filter, float32_t gyro[3], float32_t accel[3])
     {
         // update integral term
         filter->integral[i] += error[i];
-        val_limit_float(filter->integral[i], -filter->i_limit, filter->i_limit);
+        filter->integral[i] = val_limit_float(filter->integral[i], -filter->i_limit, filter->i_limit);
 
         // w_correct = w + kp * error + ki * \int error
         w_corrected[i] = gyro[i] + kp * error[i] + ki * filter->integral[i];
@@ -121,6 +121,7 @@ void mahony_get_euler(MahonyFilter *filter, float32_t euler[3])
     quat_to_euler(&(filter->q), euler);
 }
 
+/* to be checked
 void get_orientation_from_g(Quaternion *q, float32_t euler[3], float32_t accel[3])
 {
     float32_t _accel[3] = {accel[0], accel[1], accel[2]};
@@ -140,3 +141,4 @@ void get_orientation_from_g(Quaternion *q, float32_t euler[3], float32_t accel[3
 
     quat_from_euler(euler, q);
 }
+*/
