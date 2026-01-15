@@ -3,23 +3,6 @@
 
 #include <stdint.h>
 
-#define RPM_TO_RADS(value) ((float)(value) * 2 * 3.14159265359f / 60.0f)     // rpm to rad/s
-#define ANGLE_TO_RADS(value) ((float)(value) * 2 * 3.14159265359f / 8192.0f) // angle unit to rad
-
-// GM6020
-#define GM6020_CURRENT_FLOAT_TO_INT(value) ((int16_t)((value) * 16384.0f / 3.0f)) // -3A~0~3A, -16384~0~16384
-#define GM6020_CURRENT_INT_TO_FLOAT(value) ((float)(value) * 3.0f / 16384.0f)
-#define GM6020_VOLTAGE_FLOAT_TO_INT(value) ((int16_t)((value) * 25000.0f / 24.0f)) // -24v~0~24v, -25000~0~25000
-// #define GM6020_VOLTAGE_FLOAT_TO_INT(value) (int16_t)((value)) // -25000~0~25000
-
-// M3508
-#define M3508_CURRENT_FLOAT_TO_INT(value) ((int16_t)((value) * 16384.0f / 20.0f)) // -20A~0~20A, -16384~0~16384
-#define M3508_CURRENT_INT_TO_FLOAT(value) ((float)(value) * 20.0f / 16384.0f)
-
-// M2006
-#define M2006_CURRENT_FLOAT_TO_INT(value) ((int16_t)((value) * 10000.0f / 10.0f)) // -10A~0~10A, -10000~0~10000
-#define M2006_CURRENT_INT_TO_FLOAT(value) ((float)(value) * 10.0f / 10000.0f)
-
 typedef enum
 {
     M3508,
@@ -29,11 +12,6 @@ typedef enum
 
 typedef struct
 {
-    // command info, current or voltage ( only for GM6020 )
-    float command;       // for pid control
-    int16_t command_int; // raw command to can tx
-
-    // state info
     int16_t raw_velocity; // rpm
     int16_t raw_current;
     uint16_t raw_angle; // 0~8191: 0° ~ 360°
@@ -67,6 +45,10 @@ typedef enum
 void motor_init(void);
 void motor_data_interpret(uint8_t *buff, MotorInfo *motor);
 
+// motor control interface
+void motor_set_body_current(float c_fr, float c_fl, float c_bl, float c_br);
+void motor_set_neck_voltage(float v_yaw);
+void motor_set_head_command(float v_pitch, float c_friction_left, float c_friction_right, float v_trigger);
 
 // global variables
 extern MotorInfo motors[TOTAL_MOTOR_NUM];
