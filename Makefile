@@ -82,6 +82,7 @@ Device/Src/imu.c \
 Algorithm/Src/pid.c \
 Algorithm/Src/quaternion.c \
 Algorithm/Src/mahony.c \
+Algorithm/Src/kinematics.c \
 Application/Src/head.c \
 Application/Src/neck.c \
 Application/Src/body.c
