@@ -1,6 +1,8 @@
 #ifndef __BSP_FDCAN_H__
 #define __BSP_FDCAN_H__
 
+#include "fdcan.h"
+
 void BSP_FDCAN_Init(void);
 HAL_StatusTypeDef BSP_FDCAN_TxMessage(FDCAN_HandleTypeDef *hfdcan, uint32_t StdId, uint8_t *pData);
 
