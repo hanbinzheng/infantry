@@ -1,8 +1,8 @@
 #include "body.h"
-#include "fdcan.h"
-#include "bsp_fdcan.h"
-#include "motor.h"
-#include "pid.h"
+#include "kinematics.h"
+#include "dbus.h"
+#include "imu.h"
+#include "controller.h"
 
 /*
 /2   1\
@@ -11,105 +11,26 @@
 battery
 */
 
-// control frequency: 125 hz (the same as chassis m3508 can feedback)
-// control identifier: 0x200
-// components (can1, M3508 x 4):
-// 1. chassis front right (data[0], data[1]): can id 1, feedback identifier 0x201
-// 2. chassis front left (data[2], data[3]): can id 1, feedback identifier 0x202
-// 3. chassis back left (data[4], data[5]): can id 1, feedback identifier 0x203
-// 4. chassis back right (data[6], data[7]): can id 1, feedback identifier 0x204
+#define VELOCITY_SCALE (2.0f)
 
-#define M3508_REDUCTION_RATIO (19.0f)
-
-/*
- **************************************************************************
- * parameters
- **************************************************************************
- */
-PidInfo pid_fr_v2c = { // chassis front right m3508 velocity to current pid (motors[0])
-    .kp = 0.045f,
-    .ki = 0.00114514f,
-    .kd = 0.0f,
-    .i_limit = 2.0f,
-    .out_limit = 20.0f, // current limit 20.0A
-};
-
-PidInfo pid_fl_v2c = { // chassis front left m3508 velocity to current pid (motors[1])
-    .kp = 0.045f,
-    .ki = 0.00114514f,
-    .kd = 0.0f,
-    .i_limit = 2.0f,
-    .out_limit = 20.0f, // current limit 20.0A
-};
-
-PidInfo pid_bl_v2c = { // chassis back left m3508 velocity to current pid (motors[2])
-    .kp = 0.045f,
-    .ki = 0.00066666f,
-    .kd = 0.0f,
-    .i_limit = 2.0f,
-    .out_limit = 20.0f, // current limit 20.0A
-};
-
-PidInfo pid_br_v2c = { // chassis back right m3508 velocity to current pid (motors[3])
-    .kp = 0.045f,
-    .ki = 0.00066666f,
-    .kd = 0.0f,
-    .i_limit = 2.0f,
-    .out_limit = 20.0f, // current limit 20.0A
-};
+#define WHEEL_RADIUS (0.10f) // in meters
+#define SIGN_V_FR (-1.0f)    // front right velocity sign
+#define SIGN_V_FL (1.0f)     // front left velocity sign
+#define SIGN_V_BL (1.0f)     // back left velocity sign
+#define SIGN_V_BR (-1.0f)    // back right velocity sign
 
 
-/*
- **************************************************************************
- * useful functions
- **************************************************************************
- */
-static inline void set_chassis_command(
-    int16_t c_fr, int16_t c_fl, int16_t c_bl, int16_t c_br)
+static inline void linear_omni_motion(float32_t v_x, float32_t v_y)
 {
-    // set current command
-    motors[CHASSIS_FR].command = c_fr; // front right
-    motors[CHASSIS_FL].command = c_fl; // front left
-    motors[CHASSIS_BL].command = c_bl; // back left
-    motors[CHASSIS_BR].command = c_br; // back right
+    float32_t v_chassis[2] = {v_x, v_y};
+    float32_t v_wheels[4];
+    kine_omni_decomposition(v_chassis, v_wheels);
 
-    // convert float command into int
-    motors[CHASSIS_FR].command_int = M3508_CURRENT_FLOAT_TO_INT(c_fr);
-    motors[CHASSIS_FL].command_int = M3508_CURRENT_FLOAT_TO_INT(c_fl);
-    motors[CHASSIS_BL].command_int = M3508_CURRENT_FLOAT_TO_INT(c_bl);
-    motors[CHASSIS_BR].command_int = M3508_CURRENT_FLOAT_TO_INT(c_br);
-
-    // prepare data
-    uint8_t data[8];
-    data[0] = (motors[CHASSIS_FR].command_int >> 8) & 0xFF;
-    data[1] = motors[CHASSIS_FR].command_int & 0xFF;
-    data[2] = (motors[CHASSIS_FL].command_int >> 8) & 0xFF;
-    data[3] = motors[CHASSIS_FL].command_int & 0xFF;
-    data[4] = (motors[CHASSIS_BL].command_int >> 8) & 0xFF;
-    data[5] = motors[CHASSIS_BL].command_int & 0xFF;
-    data[6] = (motors[CHASSIS_BR].command_int >> 8) & 0xFF;
-    data[7] = motors[CHASSIS_BR].command_int & 0xFF;
-
-    // send command message
-    BSP_FDCAN_TxMessage(&hfdcan1, 0x200, data);
-}
-
-void set_body_target(float v_fr, float v_fl, float v_bl, float v_br)
-{
-    // get m3508 raw data
-    v_fr = v_fr * M3508_REDUCTION_RATIO;
-    v_fl = v_fl * M3508_REDUCTION_RATIO;
-    v_bl = v_bl * M3508_REDUCTION_RATIO;
-    v_br = v_br * M3508_REDUCTION_RATIO;
-
-    // calculate current command
-    int16_t c_fr = pid_calculate(&pid_fr_v2c, v_fr, motors[CHASSIS_FR].velocity); // front right
-    int16_t c_fl = pid_calculate(&pid_fl_v2c, v_fl, motors[CHASSIS_FL].velocity); // front left
-    int16_t c_bl = pid_calculate(&pid_bl_v2c, v_bl, motors[CHASSIS_BL].velocity); // back left
-    int16_t c_br = pid_calculate(&pid_br_v2c, v_br, motors[CHASSIS_BR].velocity); // back right
-
-    // set current command
-    set_chassis_command(c_fr, c_fl, c_bl, c_br);
+    set_body_velocity(
+        SIGN_V_FR * v_wheels[0] / WHEEL_RADIUS,
+        SIGN_V_FL * v_wheels[1] / WHEEL_RADIUS,
+        SIGN_V_BL * v_wheels[2] / WHEEL_RADIUS,
+        SIGN_V_BR * v_wheels[3] / WHEEL_RADIUS);
 }
 
 /*
@@ -117,6 +38,22 @@ void set_body_target(float v_fr, float v_fl, float v_bl, float v_br)
  * application body task
  **************************************************************************
  */
-void body_task(void){
-    ;
+
+void safe_mode(void)
+{
+    float32_t v_x = dbus_data.ls_x * VELOCITY_SCALE;
+    float32_t v_y = -dbus_data.ls_y * VELOCITY_SCALE;
+
+    linear_omni_motion(v_x, v_y);
+}
+
+void body_task(void)
+{
+    if (dbus_data.sw1 == SW_UP) // turn down the infantry
+    {
+        set_body_velocity(0.0f, 0.0f, 0.0f, 0.0f);
+        return;
+    }
+
+    safe_mode();
 }
