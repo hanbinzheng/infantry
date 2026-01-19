@@ -2,6 +2,7 @@
 #include "kinematics.h"
 #include "dbus.h"
 #include "imu.h"
+#include "motor.h"
 #include "controller.h"
 
 /*
@@ -18,7 +19,6 @@ battery
 #define SIGN_V_FL (1.0f)     // front left velocity sign
 #define SIGN_V_BL (1.0f)     // back left velocity sign
 #define SIGN_V_BR (-1.0f)    // back right velocity sign
-
 
 static inline void linear_omni_motion(float32_t v_x, float32_t v_y)
 {
@@ -51,7 +51,7 @@ void body_task(void)
 {
     if (dbus_data.sw1 == SW_UP) // turn down the infantry
     {
-        set_body_velocity(0.0f, 0.0f, 0.0f, 0.0f);
+        motor_set_body_current(0.0f, 0.0f, 0.0f, 0.0f);
         return;
     }
 
